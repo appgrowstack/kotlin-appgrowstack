@@ -31,6 +31,16 @@ val stack = AppGrowStack(
 )
 ```
 
+## Connectors
+
+| Module | SDK | What it adds |
+|---|---|---|
+| `campaign-appgrowstack` | kotlin-app-campaign | `stack.campaignSource(fallback)`: the set fetched from the server (ETag, 304), the bundled set until the first fetch succeeds |
+
+```kotlin
+val campaigns = CampaignEngine(fetcher = stack.campaignSource(BundledCampaignSetFetcher { readAsset("campaigns.json") }), …)
+```
+
 ## Installation
 
 From [JitPack](https://jitpack.io/#appgrowstack/kotlin-appgrowstack). Add `appgrowstack-core` and the connector module of each SDK you use.
@@ -38,6 +48,7 @@ From [JitPack](https://jitpack.io/#appgrowstack/kotlin-appgrowstack). Add `appgr
 ```kotlin
 dependencies {
     implementation("com.github.appgrowstack.kotlin-appgrowstack:appgrowstack-core:0.1.0")
+    implementation("com.github.appgrowstack.kotlin-appgrowstack:campaign-appgrowstack:0.1.0")
 }
 ```
 

@@ -14,3 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   header).
 - Connector modules are added per SDK (`<sdk>-appgrowstack`), so an app pulls in only the SDKs
   whose modules it adds.
+- `campaign-appgrowstack` (kotlin-app-campaign 0.3): `stack.campaignSource(fallback)` fetches the set
+  with `GET /v1/campaigns/sets/<public key>` (ETag, 304, the `AppGrowStack-Client` header naming
+  kotlin-app-campaign) and uses the bundled set until the first fetch succeeds.
+- `AppGrowStackResponse.headers` (lowercase names) and `header(name)`.

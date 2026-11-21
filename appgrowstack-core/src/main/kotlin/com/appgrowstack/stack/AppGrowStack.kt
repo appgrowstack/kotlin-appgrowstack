@@ -118,7 +118,15 @@ public class AppGrowStackRequest(
     public val body: ByteArray?,
 )
 
-public class AppGrowStackResponse(public val status: Int, public val body: ByteArray)
+public class AppGrowStackResponse(
+    public val status: Int,
+    public val body: ByteArray,
+    /** Header names in lowercase. */
+    public val headers: Map<String, String> = emptyMap(),
+) {
+    /** A header by name, any case. */
+    public fun header(name: String): String? = headers[name.lowercase()]
+}
 
 /** Sends the connectors' requests. Blocking; call it off the main thread. */
 public fun interface AppGrowStackHttp {
@@ -139,7 +147,10 @@ public class UrlConnectionAppGrowStackHttp(private val timeoutMillis: Int = 20_0
             }
             val status = connection.responseCode
             val stream = if (status >= 400) connection.errorStream else connection.inputStream
-            return AppGrowStackResponse(status, stream?.use { it.readBytes() } ?: ByteArray(0))
+            val headers = connection.headerFields.entries
+                .filter { (name, values) -> name != null && values.isNotEmpty() }
+                .associate { (name, values) -> name.lowercase() to values.first() }
+            return AppGrowStackResponse(status, stream?.use { it.readBytes() } ?: ByteArray(0), headers)
         } finally {
             connection.disconnect()
         }

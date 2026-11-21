@@ -26,6 +26,16 @@ val stack = AppGrowStack(
 )
 ```
 
+## コネクタ
+
+| モジュール | SDK | 足す物 |
+|---|---|---|
+| `campaign-appgrowstack` | kotlin-app-campaign | `stack.campaignSource(fallback)`：組をサーバーから取る（ETag・304）。最初に取れるまでは同梱の組 |
+
+```kotlin
+val campaigns = CampaignEngine(fetcher = stack.campaignSource(BundledCampaignSetFetcher { readAsset("campaigns.json") }), …)
+```
+
 ## 入れ方
 
 [JitPack](https://jitpack.io/#appgrowstack/kotlin-appgrowstack)から入れます。`appgrowstack-core`と、使うSDKのコネクタのモジュールを足します。
@@ -33,6 +43,7 @@ val stack = AppGrowStack(
 ```kotlin
 dependencies {
     implementation("com.github.appgrowstack.kotlin-appgrowstack:appgrowstack-core:0.1.0")
+    implementation("com.github.appgrowstack.kotlin-appgrowstack:campaign-appgrowstack:0.1.0")
 }
 ```
 

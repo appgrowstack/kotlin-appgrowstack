@@ -1,0 +1,57 @@
+package com.appgrowstack.stack.campaign
+
+import com.appgrowstack.campaign.CampaignFetchResult
+import com.appgrowstack.campaign.CampaignSdk
+import com.appgrowstack.campaign.CampaignSetFetchFailure
+import com.appgrowstack.campaign.CampaignSetFetcher
+import com.appgrowstack.stack.AppGrowStack
+import com.appgrowstack.stack.AppGrowStackRequest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
+
+/**
+ * The set from appgrowstack: `GET /v1/campaigns/sets/<public key>` with `If-None-Match` (ETag
+ * `"v<version>"`). Until the first fetch succeeds, [fallback] (the set shipped in the app) is used.
+ *
+ * The `AppGrowStack-Client` header names kotlin-app-campaign and its version
+ * (`android/2.1.0/kotlin-app-campaign/0.3.0`), so the server counts which versions fetch.
+ */
+public class AppGrowStackCampaignSetFetcher(
+    private val stack: AppGrowStack,
+    private val fallback: CampaignSetFetcher? = null,
+) : CampaignSetFetcher {
+    override suspend fun fetch(etag: String?): CampaignFetchResult =
+        try {
+            fromServer(etag)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Never fetched (no ETag): the bundled set lets the first launch decide offline.
+            if (etag != null || fallback == null) throw e
+            fallback.fetch(null)
+        }
+
+    private suspend fun fromServer(etag: String?): CampaignFetchResult = withContext(Dispatchers.IO) {
+        val base = stack.request("GET", "/v1/campaigns/sets/${stack.publicKey}")
+        // The key is in the path (auth "public_key_path"); the set is the same for everyone.
+        val headers = base.headers.filterKeys { it != "Authorization" } +
+            ("AppGrowStack-Client" to "${stack.app.platform}/${stack.app.version}/${CampaignSdk.NAME}/${CampaignSdk.VERSION}") +
+            (if (etag != null) mapOf("If-None-Match" to etag) else emptyMap())
+        val response = stack.send(AppGrowStackRequest(base.method, base.url, headers, null))
+        when (response.status) {
+            200 -> CampaignFetchResult.Fetched(response.body.toString(Charsets.UTF_8), response.header("ETag"))
+            304 -> CampaignFetchResult.NotModified
+            else -> throw CampaignSetFetchFailure(response.status)
+        }
+    }
+}
+
+/**
+ * The fetcher for `CampaignEngine(fetcher = …)`.
+ *
+ * @param fallback the set shipped in the app (`BundledCampaignSetFetcher { … }`), used only until the
+ *   first fetch succeeds.
+ */
+public fun AppGrowStack.campaignSource(fallback: CampaignSetFetcher? = null): AppGrowStackCampaignSetFetcher =
+    AppGrowStackCampaignSetFetcher(this, fallback)

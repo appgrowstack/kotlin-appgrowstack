@@ -17,4 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `campaign-appgrowstack` (kotlin-app-campaign 0.3): `stack.campaignSource(fallback)` fetches the set
   with `GET /v1/campaigns/sets/<public key>` (ETag, 304, the `AppGrowStack-Client` header naming
   kotlin-app-campaign) and uses the bundled set until the first fetch succeeds.
+- `sessions-appgrowstack` (kotlin-app-sessions 0.1): `stack.sessionSink()` sends the light record's
+  batches with `POST /v1/sessions/batches`. 200 is accepted with the replay decision and the policy's
+  kept properties, 204 is disabled, other 4xx drop the batch, 429, 5xx and a failed connection throw
+  so the batch is sent again later.
 - `AppGrowStackResponse.headers` (lowercase names) and `header(name)`.

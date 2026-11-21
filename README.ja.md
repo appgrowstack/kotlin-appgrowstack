@@ -31,6 +31,7 @@ val stack = AppGrowStack(
 | モジュール | SDK | 足す物 |
 |---|---|---|
 | `campaign-appgrowstack` | kotlin-app-campaign | `stack.campaignSource(fallback)`：組をサーバーから取る（ETag・304）。最初に取れるまでは同梱の組 |
+| `sessions-appgrowstack` | kotlin-app-sessions | `stack.sessionSink()`：軽い記録のバッチを送る `SessionSink`（`POST /v1/sessions/batches`）。サーバーの録画の判断と残す props を返す |
 
 ```kotlin
 val campaigns = CampaignEngine(fetcher = stack.campaignSource(BundledCampaignSetFetcher { readAsset("campaigns.json") }), …)

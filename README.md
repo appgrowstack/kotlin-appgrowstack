@@ -36,6 +36,7 @@ val stack = AppGrowStack(
 | Module | SDK | What it adds |
 |---|---|---|
 | `campaign-appgrowstack` | kotlin-app-campaign | `stack.campaignSource(fallback)`: the set fetched from the server (ETag, 304), the bundled set until the first fetch succeeds |
+| `sessions-appgrowstack` | kotlin-app-sessions | `stack.sessionSink()`: the `SessionSink` that sends the light record's batches (`POST /v1/sessions/batches`) and hands back the server's replay decision and kept properties |
 
 ```kotlin
 val campaigns = CampaignEngine(fetcher = stack.campaignSource(BundledCampaignSetFetcher { readAsset("campaigns.json") }), …)

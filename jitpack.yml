@@ -1,0 +1,5 @@
+# JitPack が公開の repo のタグから組む（com.github.appgrowstack.kotlin-appgrowstack:appgrowstack-core:<バージョン>）
+jdk:
+  - openjdk21
+install:
+  - ./gradlew :appgrowstack-core:publishToMavenLocal -Pversion=$VERSION

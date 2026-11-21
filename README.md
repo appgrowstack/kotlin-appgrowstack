@@ -34,6 +34,7 @@ library.
 | `links-appgrowstack` | kotlin-app-links | `stack.attributionResolver()`: the install's source decided on the server (`POST /v1/links/attributions`) |
 | `support-appgrowstack` | kotlin-app-support | `stack.supportTransport(uid, tokens)`: requests, screenshots, replies with the owner token and help articles on `/v1/support/*`. `stack.supportContext(device)`: the context with the stack's recent activity |
 | `sessions-appgrowstack` | kotlin-app-sessions | `stack.sessionSink()`: the `SessionSink` that sends the light record's batches (`POST /v1/sessions/batches`) and hands back the server's replay decision and kept properties |
+| `config-appgrowstack` | kotlin-app-config | `stack.configSource()`: the config set fetched from the server (`GET /v1/config/sets/<public key>`, ETag, 304). `stack.configFacts()`: the device values for the rules |
 
 ## Quick Start
 
@@ -43,6 +44,7 @@ import com.appgrowstack.stack.AppGrowStack
 import com.appgrowstack.stack.AppGrowStackApp
 import com.appgrowstack.stack.AppGrowStackEnvironment
 import com.appgrowstack.stack.campaign.campaignSource
+import com.appgrowstack.stack.config.configSource
 import com.appgrowstack.stack.sessions.sessionSink
 
 val stack = AppGrowStack(
@@ -64,6 +66,9 @@ val fetcher = stack.campaignSource(
 
 // sessions-appgrowstack: pass it as AppSessions(sink = …)
 val sink = stack.sessionSink()
+
+// config-appgrowstack: pass it as AppConfig(source = …)
+val source = stack.configSource()
 ```
 
 ## Documentation
@@ -93,6 +98,7 @@ connector module includes `appgrowstack-core`:
 dependencies {
     implementation("com.github.appgrowstack.kotlin-appgrowstack:campaign-appgrowstack:0.1.0")
     implementation("com.github.appgrowstack.kotlin-appgrowstack:sessions-appgrowstack:0.1.0")
+    // config-appgrowstack comes with the next release (not in 0.1.0)
     // appgrowstack-core alone
     // implementation("com.github.appgrowstack.kotlin-appgrowstack:appgrowstack-core:0.1.0")
 }

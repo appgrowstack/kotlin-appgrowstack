@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `support-appgrowstack` (kotlin-app-support 0.1): `stack.supportTransport(uid, tokens)` (requests,
   screenshots, replies with the owner token kept by the app's `SupportTokenStore`, help articles on
   `/v1/support/*`) and `stack.supportContext(device)` (the context with the stack's recent activity).
+- `config-appgrowstack` (kotlin-app-config 0.1): `stack.configSource()` fetches the config set with
+  `GET /v1/config/sets/<public key>` (ETag, 304, the `AppGrowStack-Client` header naming
+  kotlin-app-config); `stack.configFacts()` gives the SDK's device values for the rules.
 
 ## [0.1.0] - 2026-11-21
 

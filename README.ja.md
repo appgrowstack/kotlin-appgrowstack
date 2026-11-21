@@ -27,6 +27,7 @@ kotlin-app-*のライブラリはどれも単体で動きます。このライ�
 | `links-appgrowstack` | kotlin-app-links | `stack.attributionResolver()`: 入れた人の流入元をサーバーで決める（`POST /v1/links/attributions`） |
 | `support-appgrowstack` | kotlin-app-support | `stack.supportTransport(uid, tokens)`: 問い合わせ・スクリーンショット・持ち主の鍵で読む返事・ヘルプの記事（`/v1/support/*`）。`stack.supportContext(device)`: つなぐ型の直近の記録を添えた文脈 |
 | `sessions-appgrowstack` | kotlin-app-sessions | `stack.sessionSink()`: 軽い記録のバッチを送る `SessionSink`（`POST /v1/sessions/batches`）。サーバーが決めたリプレイの要否と残すプロパティを返す |
+| `config-appgrowstack` | kotlin-app-config | `stack.configSource()`: 設定の組をサーバーから取る（`GET /v1/config/sets/<public key>`・ETag・304）。`stack.configFacts()`: 規則に使う端末の値 |
 
 ## はじめに
 
@@ -36,6 +37,7 @@ import com.appgrowstack.stack.AppGrowStack
 import com.appgrowstack.stack.AppGrowStackApp
 import com.appgrowstack.stack.AppGrowStackEnvironment
 import com.appgrowstack.stack.campaign.campaignSource
+import com.appgrowstack.stack.config.configSource
 import com.appgrowstack.stack.sessions.sessionSink
 
 val stack = AppGrowStack(
@@ -57,6 +59,9 @@ val fetcher = stack.campaignSource(
 
 // sessions-appgrowstack: pass it as AppSessions(sink = …)
 val sink = stack.sessionSink()
+
+// config-appgrowstack: pass it as AppConfig(source = …)
+val source = stack.configSource()
 ```
 
 ## ドキュメント
@@ -83,6 +88,7 @@ dependencyResolutionManagement {
 dependencies {
     implementation("com.github.appgrowstack.kotlin-appgrowstack:campaign-appgrowstack:0.1.0")
     implementation("com.github.appgrowstack.kotlin-appgrowstack:sessions-appgrowstack:0.1.0")
+    // config-appgrowstack は次の版から（0.1.0 には無い）
     // appgrowstack-core alone
     // implementation("com.github.appgrowstack.kotlin-appgrowstack:appgrowstack-core:0.1.0")
 }

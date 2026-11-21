@@ -26,6 +26,7 @@ include(":campaign-appgrowstack")
 include(":links-appgrowstack")
 include(":support-appgrowstack")
 include(":sessions-appgrowstack")
+include(":config-appgrowstack")
 
 if (System.getenv("APPGROWSTACK_LOCAL") != null) {
     includeBuild("../kotlin-app-campaign") {
@@ -46,6 +47,11 @@ if (System.getenv("APPGROWSTACK_LOCAL") != null) {
     includeBuild("../kotlin-app-sessions") {
         dependencySubstitution {
             substitute(module("com.github.appgrowstack.kotlin-app-sessions:sessions-core")).using(project(":sessions-core"))
+        }
+    }
+    includeBuild("../kotlin-app-config") {
+        dependencySubstitution {
+            substitute(module("com.github.appgrowstack.kotlin-app-config:config-core")).using(project(":config-core"))
         }
     }
 }

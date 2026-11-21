@@ -7,19 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-22
+
 ### Added
 
 - `campaign-appgrowstack`: `stack.campaignContext`, the engine's context from the stack's values
   (the clock's time zone, the first-seen date, whether the device is internal).
-- `links-appgrowstack` (kotlin-app-links 0.1): `stack.attributionResolver()` decides the install's
+- `links-appgrowstack` (kotlin-app-links 0.2): `stack.attributionResolver()` decides the install's
   source with `POST /v1/links/attributions` (the stack's install id and platform). 200 is decided,
   400 is rejected, anything else and a failed connection are tried on a later launch.
-- `support-appgrowstack` (kotlin-app-support 0.1): `stack.supportTransport(uid, tokens)` (requests,
+- `support-appgrowstack` (kotlin-app-support 0.3): `stack.supportTransport(uid, tokens)` (requests,
   screenshots, replies with the owner token kept by the app's `SupportTokenStore`, help articles on
   `/v1/support/*`) and `stack.supportContext(device)` (the context with the stack's recent activity).
 - `config-appgrowstack` (kotlin-app-config 0.1): `stack.configSource()` fetches the config set with
   `GET /v1/config/sets/<public key>` (ETag, 304, the `AppGrowStack-Client` header naming
   kotlin-app-config); `stack.configFacts()` gives the SDK's device values for the rules.
+
+### Changed
+
+- `campaign-appgrowstack` needs kotlin-app-campaign 0.4 and `sessions-appgrowstack` kotlin-app-sessions 0.1.1.
+
+### Fixed
+
+- `sessions-appgrowstack` sends each batch with `AppGrowStack.installId` as its `install_id`, so the light
+  record joins the same install as the analytics, links and support. It sent the id the recorder kept.
 
 ## [0.1.0] - 2026-11-21
 

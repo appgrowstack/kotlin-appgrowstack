@@ -24,7 +24,7 @@ java {
 dependencies {
     api(project(":appgrowstack-core"))
     // 頼る本体の版。publish-sdk.sh が公開済みかを確かめる。APPGROWSTACK_LOCAL ではモノリポの今の物に差し替わる
-    api("com.github.appgrowstack:kotlin-app-campaign:0.3.0")
+    api("com.github.appgrowstack:kotlin-app-campaign:0.4.0")
     testImplementation(kotlin("test"))
     testImplementation(libs.coroutines.test)
 }

@@ -96,11 +96,13 @@ connector module includes `appgrowstack-core`:
 
 ```kotlin
 dependencies {
-    implementation("com.github.appgrowstack.kotlin-appgrowstack:campaign-appgrowstack:0.1.0")
-    implementation("com.github.appgrowstack.kotlin-appgrowstack:sessions-appgrowstack:0.1.0")
-    // config-appgrowstack comes with the next release (not in 0.1.0)
+    implementation("com.github.appgrowstack.kotlin-appgrowstack:campaign-appgrowstack:0.2.0")
+    implementation("com.github.appgrowstack.kotlin-appgrowstack:sessions-appgrowstack:0.2.0")
+    implementation("com.github.appgrowstack.kotlin-appgrowstack:links-appgrowstack:0.2.0")
+    implementation("com.github.appgrowstack.kotlin-appgrowstack:support-appgrowstack:0.2.0")
+    implementation("com.github.appgrowstack.kotlin-appgrowstack:config-appgrowstack:0.2.0")
     // appgrowstack-core alone
-    // implementation("com.github.appgrowstack.kotlin-appgrowstack:appgrowstack-core:0.1.0")
+    // implementation("com.github.appgrowstack.kotlin-appgrowstack:appgrowstack-core:0.2.0")
 }
 ```
 

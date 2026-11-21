@@ -31,15 +31,15 @@ class AppGrowStackTest {
     fun requestsCarryTheKeyAndTheClientHeader() {
         val sent = mutableListOf<AppGrowStackRequest>()
         val s = stack(AppGrowStackEnvironment.Staging, http = { sent += it; AppGrowStackResponse(200, ByteArray(0)) })
-        s.send(s.request("GET", "/v1/support/articles", mapOf("lang" to "zh-Hant")))
+        s.send(s.request("GET", "/v1/support/articles", "kotlin-app-support", "0.2.0", mapOf("lang" to "zh-Hant")))
         val request = assertNotNull(sent.firstOrNull())
         assertEquals("GET", request.method)
         assertEquals("https://api-staging.appgrowstack.com/v1/support/articles?lang=zh-Hant", request.url)
         assertEquals("Bearer pk_KUdMabcdefghijklmnopqrst", request.headers["Authorization"])
-        // contracts K2-5: <platform>/<app version>/<sdk>/<sdk version>
-        assertEquals("android/3.3.0/kotlin-appgrowstack/${AppGrowStack.SDK_VERSION}", request.headers["AppGrowStack-Client"])
+        // contracts K2-5: <platform>/<app version>/<sdk>/<sdk version>, naming the SDK the connector serves
+        assertEquals("android/3.3.0/kotlin-app-support/0.2.0", request.headers["AppGrowStack-Client"])
         val pattern = Regex("""^(ios|android)/\d+\.\d+(\.\d+)?/[a-z][a-z0-9-]{1,40}/\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$""")
-        assert(pattern.matches(s.clientHeader))
+        assert(pattern.matches(s.clientHeader("kotlin-app-sessions", "0.1.0")))
     }
 
     @Test
@@ -55,7 +55,7 @@ class AppGrowStackTest {
     @Test
     fun localEnvironmentKeepsItsRoot() {
         val s = stack(AppGrowStackEnvironment.Local("http://10.0.2.2:8787/"))
-        assertEquals("http://10.0.2.2:8787/v1/notify/opened", s.request("POST", "/v1/notify/opened").url)
+        assertEquals("http://10.0.2.2:8787/v1/notify/opened", s.request("POST", "/v1/notify/opened", "kotlin-app-notifications", "0.1.0").url)
     }
 
     @Test

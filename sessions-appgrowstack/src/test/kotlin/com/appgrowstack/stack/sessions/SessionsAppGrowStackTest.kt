@@ -6,6 +6,7 @@ import com.appgrowstack.sessions.SessionDeviceInfo
 import com.appgrowstack.sessions.SessionReplayMode
 import com.appgrowstack.sessions.SessionScreen
 import com.appgrowstack.sessions.SessionSinkReply
+import com.appgrowstack.sessions.SessionsSdk
 import com.appgrowstack.stack.AppGrowStack
 import com.appgrowstack.stack.AppGrowStackApp
 import com.appgrowstack.stack.AppGrowStackEnvironment
@@ -52,6 +53,7 @@ class SessionsAppGrowStackTest {
         assertEquals("https://api-staging.appgrowstack.com/v1/sessions/batches", request.url)
         assertEquals("Bearer pk_KUdMabcdefghijklmnopqrst", request.headers["Authorization"])
         assertEquals("application/json", request.headers["Content-Type"])
+        assertEquals("android/3.4.0/kotlin-app-sessions/${SessionsSdk.VERSION}", request.headers["AppGrowStack-Client"])
         assertEquals(batch.jsonText(), request.body!!.toString(Charsets.UTF_8))
     }
 

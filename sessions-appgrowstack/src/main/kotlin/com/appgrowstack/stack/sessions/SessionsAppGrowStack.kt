@@ -5,6 +5,7 @@ import com.appgrowstack.sessions.SessionJson
 import com.appgrowstack.sessions.SessionReplayMode
 import com.appgrowstack.sessions.SessionSink
 import com.appgrowstack.sessions.SessionSinkReply
+import com.appgrowstack.sessions.SessionsSdk
 import com.appgrowstack.stack.AppGrowStack
 import java.io.IOException
 
@@ -18,6 +19,9 @@ import java.io.IOException
  *   being sent on every launch
  * - 429, 5xx, no connection: throws, so the recorder keeps the batch and sends it again later
  *
+ * The `AppGrowStack-Client` header names kotlin-app-sessions and its version
+ * (`android/3.4.0/kotlin-app-sessions/0.1.0`), as every connector names the SDK it serves.
+ *
  * Called on the recorder's sending thread (the request blocks).
  */
 public class AppGrowStackSessionSink(private val stack: AppGrowStack) : SessionSink {
@@ -25,7 +29,14 @@ public class AppGrowStackSessionSink(private val stack: AppGrowStack) : SessionS
     public class Failure(public val status: Int) : IOException("POST /v1/sessions/batches answered $status")
 
     override fun send(batch: SessionBatch): SessionSinkReply {
-        val request = stack.request("POST", "/v1/sessions/batches", body = batch.jsonText().toByteArray(Charsets.UTF_8), contentType = "application/json")
+        val request = stack.request(
+            "POST",
+            "/v1/sessions/batches",
+            SessionsSdk.NAME,
+            SessionsSdk.VERSION,
+            body = batch.jsonText().toByteArray(Charsets.UTF_8),
+            contentType = "application/json",
+        )
         val response = stack.send(request)
         return when {
             response.status == 200 -> readAnswer(response.body.toString(Charsets.UTF_8)) ?: throw Failure(200)

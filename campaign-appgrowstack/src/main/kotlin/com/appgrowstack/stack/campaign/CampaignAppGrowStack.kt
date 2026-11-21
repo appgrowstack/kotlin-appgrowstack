@@ -33,10 +33,9 @@ public class AppGrowStackCampaignSetFetcher(
         }
 
     private suspend fun fromServer(etag: String?): CampaignFetchResult = withContext(Dispatchers.IO) {
-        val base = stack.request("GET", "/v1/campaigns/sets/${stack.publicKey}")
+        val base = stack.request("GET", "/v1/campaigns/sets/${stack.publicKey}", CampaignSdk.NAME, CampaignSdk.VERSION)
         // The key is in the path (auth "public_key_path"); the set is the same for everyone.
         val headers = base.headers.filterKeys { it != "Authorization" } +
-            ("AppGrowStack-Client" to "${stack.app.platform}/${stack.app.version}/${CampaignSdk.NAME}/${CampaignSdk.VERSION}") +
             (if (etag != null) mapOf("If-None-Match" to etag) else emptyMap())
         val response = stack.send(AppGrowStackRequest(base.method, base.url, headers, null))
         when (response.status) {

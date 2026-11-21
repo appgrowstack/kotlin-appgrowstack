@@ -29,12 +29,6 @@ public class AppGrowStack(
     storage: AppGrowStackStorage = MemoryAppGrowStackStorage(),
     private val http: AppGrowStackHttp = UrlConnectionAppGrowStackHttp(),
 ) {
-    public companion object {
-        /** The name and version sent in `AppGrowStack-Client`. */
-        public const val SDK_NAME: String = "kotlin-appgrowstack"
-        public const val SDK_VERSION: String = "0.1.0"
-    }
-
     /** Always lowercase (the contract's form), whatever case the app passed. */
     public val installId: String = installId.lowercase()
 
@@ -54,15 +48,31 @@ public class AppGrowStack(
     /** The person the connectors report for: the install id until people are resolved on the server. */
     public fun person(): String = installId
 
-    /** `AppGrowStack-Client: <platform>/<app version>/<sdk>/<sdk version>` (contracts K2-5). */
-    public val clientHeader: String get() = "${app.platform}/${app.version}/$SDK_NAME/$SDK_VERSION"
+    /**
+     * `AppGrowStack-Client: <platform>/<app version>/<sdk>/<sdk version>` (contracts K2-5).
+     *
+     * [sdk] and [version] are the SDK the connector serves (`CampaignSdk.NAME`, `SessionsSdk.VERSION`,
+     * …), not this package, so the server counts which versions of that SDK call.
+     */
+    public fun clientHeader(sdk: String, version: String): String = "${app.platform}/${app.version}/$sdk/$version"
 
-    /** A request to [path] under the environment's root, with the public key and the client header. */
-    public fun request(method: String, path: String, query: Map<String, String> = emptyMap(), body: ByteArray? = null, contentType: String? = null): AppGrowStackRequest {
+    /**
+     * A request to [path] under the environment's root, with the public key and the client header
+     * naming [sdk] at [version] ([clientHeader]).
+     */
+    public fun request(
+        method: String,
+        path: String,
+        sdk: String,
+        version: String,
+        query: Map<String, String> = emptyMap(),
+        body: ByteArray? = null,
+        contentType: String? = null,
+    ): AppGrowStackRequest {
         val q = if (query.isEmpty()) "" else "?" + query.entries.joinToString("&") { (k, v) -> "${enc(k)}=${enc(v)}" }
         val headers = buildMap {
             put("Authorization", "Bearer $publicKey")
-            put("AppGrowStack-Client", clientHeader)
+            put("AppGrowStack-Client", clientHeader(sdk, version))
             if (contentType != null) put("Content-Type", contentType)
         }
         return AppGrowStackRequest(method, environment.baseUrl.trimEnd('/') + path + q, headers, body)

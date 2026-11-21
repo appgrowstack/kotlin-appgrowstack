@@ -16,6 +16,7 @@ kotlin-app-*のライブラリはどれも単体で動きます。このライ�
 - **ライブラリごとにモジュールが1つ。** 使うライブラリのコネクターのモジュールだけを足します。どのモジュールも自分のライブラリだけを取り込みます
 - **共通の情報。** install idの小文字への揃えは1か所で行い、初回の日付は知っている中で一番早い物にします。起動をまたいで保存するときは `AppGrowStackStorage` を渡します。指定しなければメモリーにだけ持ちます
 - **環境。** `AppGrowStackEnvironment.Production`・`Staging`・`Local(baseUrl)`。どのリクエストにも公開キーと `AppGrowStack-Client` のヘッダーを付けます
+- **答えの読み方は1つの表。** `AppGrowStackAnswer` がどのコネクターでも同じに読みます。2xxは終わり、401・403・408・429・5xxは後で送り直し、ほかの4xxは捨てます
 - **Kotlin/JVMだけ。** Androidに依存しないので、headlessのテストからJVMでコネクターを動かせます
 
 ### コネクター
@@ -24,8 +25,8 @@ kotlin-app-*のライブラリはどれも単体で動きます。このライ�
 |---|---|---|
 | `appgrowstack-core` | なし | `AppGrowStack`・`AppGrowStackApp`・`AppGrowStackEnvironment`・`AppGrowStackStorage` |
 | `campaign-appgrowstack` | kotlin-app-campaign | `stack.campaignSource(fallback)`: 組をサーバーから取る（ETag・304）。最初の取得が通るまでは同梱した組を使う。`stack.campaignContext`: 初めて見た日を入れたエンジンの文脈 |
-| `links-appgrowstack` | kotlin-app-links | `stack.attributionResolver()`: 入れた人の流入元をサーバーで決める（`POST /v1/links/attributions`） |
-| `support-appgrowstack` | kotlin-app-support | `stack.supportTransport(uid, tokens)`: 問い合わせ・スクリーンショット・オーナーのキーで読む返事・ヘルプの記事（`/v1/support/*`）。`stack.supportContext(device)`: つなぐ型の直近の記録を添えた文脈 |
+| `links-appgrowstack` | kotlin-app-links | `stack.attributionResolver()`: 入れた人の流入元をサーバーで決める（`POST /v1/links/attributions`）。`AttributionReporter` の `firstOpenAt` につなぐ型の `firstSeenAt` を渡す |
+| `support-appgrowstack` | kotlin-app-support | `stack.supportTransport(uid, tokens)`: 問い合わせ・スクリーンショット・オーナーのトークンで読む返事・ヘルプの記事（`/v1/support/*`）と、アンケートや意見の画面で書いた文を送る `sendFeedback(text, campaign, choice, context, lang)`（`POST /v1/support/feedback`）。`stack.supportContext(device)`: つなぐ型の直近の記録を添えた文脈 |
 | `sessions-appgrowstack` | kotlin-app-sessions | `stack.sessionSink()`: 軽い記録のバッチを送る `SessionSink`（`POST /v1/sessions/batches`）。サーバーが決めたリプレイの要否と残すプロパティを返す |
 | `config-appgrowstack` | kotlin-app-config | `stack.configSource()`: 設定の組をサーバーから取る（`GET /v1/config/sets/<public key>`・ETag・304）。`stack.configFacts()`: 規則に使う端末の値 |
 

@@ -23,6 +23,8 @@ library.
   it in memory
 - **Environments.** `AppGrowStackEnvironment.Production`, `Staging` and `Local(baseUrl)`. Every
   request carries the public key and the `AppGrowStack-Client` header
+- **One answer table.** `AppGrowStackAnswer` reads every status the same way in every connector:
+  2xx is done, 401, 403, 408, 429 and 5xx are sent again later, and any other 4xx is dropped
 - **Kotlin/JVM only.** No Android dependency, so headless tests run the connectors on the JVM
 
 ### Connectors
@@ -31,8 +33,8 @@ library.
 |---|---|---|
 | `appgrowstack-core` | none | `AppGrowStack`, `AppGrowStackApp`, `AppGrowStackEnvironment`, `AppGrowStackStorage` |
 | `campaign-appgrowstack` | kotlin-app-campaign | `stack.campaignSource(fallback)`: the set fetched from the server (ETag, 304), the bundled set until the first fetch succeeds. `stack.campaignContext`: the engine's context with the first-seen date |
-| `links-appgrowstack` | kotlin-app-links | `stack.attributionResolver()`: the install's source decided on the server (`POST /v1/links/attributions`) |
-| `support-appgrowstack` | kotlin-app-support | `stack.supportTransport(uid, tokens)`: requests, screenshots, replies with the owner token and help articles on `/v1/support/*`. `stack.supportContext(device)`: the context with the stack's recent activity |
+| `links-appgrowstack` | kotlin-app-links | `stack.attributionResolver()`: the install's source decided on the server (`POST /v1/links/attributions`). Give `AttributionReporter` the stack's `firstSeenAt` as `firstOpenAt` |
+| `support-appgrowstack` | kotlin-app-support | `stack.supportTransport(uid, tokens)`: requests, screenshots, replies with the owner token and help articles on `/v1/support/*`, and `sendFeedback(text, campaign, choice, context, lang)` for what a person wrote in a survey or a feedback screen (`POST /v1/support/feedback`). `stack.supportContext(device)`: the context with the stack's recent activity |
 | `sessions-appgrowstack` | kotlin-app-sessions | `stack.sessionSink()`: the `SessionSink` that sends the light record's batches (`POST /v1/sessions/batches`) and hands back the server's replay decision and kept properties |
 | `config-appgrowstack` | kotlin-app-config | `stack.configSource()`: the config set fetched from the server (`GET /v1/config/sets/<public key>`, ETag, 304). `stack.configFacts()`: the device values for the rules |
 

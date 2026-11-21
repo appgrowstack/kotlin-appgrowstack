@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `appgrowstack-core`: `AppGrowStackAnswer`, the one table every connector reads a status with:
+  2xx is `Accepted`; 401, 403, 408, 429 and 5xx are `RetryLater` (a key or a paused project is
+  fixed on the server, so the same body passes later); any other 4xx is `Rejected`.
+- `support-appgrowstack`: `sendFeedback(text, campaign, choice, context, lang)` sends what a person
+  wrote in a survey or a feedback screen (`POST /v1/support/feedback`), the same as Swift's
+  `SupportAppGrowStack.sendFeedback`. Empty text is not sent; a choice without a campaign is left out.
+
+### Changed
+
+- `support-appgrowstack`: `submit` returns kotlin-app-support's `SupportSubmission`. Once the request
+  is made, an image that fails is handed back in `unsentImages` instead of throwing, so sending the
+  form again no longer makes a second request.
+- `links-appgrowstack`: statuses are read with `AppGrowStackAnswer`. 404, 409, 413 and 422 are now
+  rejected (were tried again on every launch); 401 and 403 are still tried later, up to
+  `AttributionReporter`'s `maxAttempts`.
+- `sessions-appgrowstack`: statuses are read with `AppGrowStackAnswer`. 401 and 403 keep the batch
+  (were dropped). A 200 whose body cannot be read (a `replay` this version does not know) takes the
+  batch as `Accepted()` instead of throwing, which kept it at the head of the queue and blocked the
+  batches behind it.
+
 ## [0.2.0] - 2026-11-22
 
 ### Added

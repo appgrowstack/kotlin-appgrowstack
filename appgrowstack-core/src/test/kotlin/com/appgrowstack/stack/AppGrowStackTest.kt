@@ -21,6 +21,14 @@ class AppGrowStackTest {
     ) = AppGrowStack("pk_KUdMabcdefghijklmnopqrst", environment, "A1B2C3D4-0000-4000-8000-00000000000F", firstSeenAt, app, clock(now), storage = storage, http = http)
 
     @Test
+    fun oneAnswerTableForEveryConnector() {
+        for (status in listOf(200, 201, 202, 204)) assertEquals(AppGrowStackAnswer.Accepted, AppGrowStackAnswer.of(status))
+        // The key or the project is fixed on the server, not on the device: the same body passes later
+        for (status in listOf(401, 403, 408, 429, 500, 502, 503)) assertEquals(AppGrowStackAnswer.RetryLater, AppGrowStackAnswer.of(status))
+        for (status in listOf(400, 404, 409, 413, 422)) assertEquals(AppGrowStackAnswer.Rejected, AppGrowStackAnswer.of(status))
+    }
+
+    @Test
     fun installIdIsLowercasedAndIsThePerson() {
         val s = stack()
         assertEquals("a1b2c3d4-0000-4000-8000-00000000000f", s.installId)

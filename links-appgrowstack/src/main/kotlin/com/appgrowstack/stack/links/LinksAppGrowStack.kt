@@ -6,6 +6,7 @@ import com.appgrowstack.links.AttributionResolution
 import com.appgrowstack.links.AttributionResolver
 import com.appgrowstack.links.LinksSdk
 import com.appgrowstack.stack.AppGrowStack
+import com.appgrowstack.stack.AppGrowStackAnswer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -15,11 +16,13 @@ import kotlin.coroutines.cancellation.CancellationException
  * Decides the install's source on appgrowstack (`POST /v1/links/attributions`). The server also
  * knows the short links' own sources and records `attribution_recorded` for the person.
  *
- * - 200: [AttributionResolution.Decided] with the server's answer
- * - 400: [AttributionResolution.Rejected] (the body will never pass; sending it again on every launch would only add noise)
- * The `AppGrowStack-Client` header names kotlin-app-links and its version.
+ * The status is read with [AppGrowStackAnswer]:
+ * - 2xx: [AttributionResolution.Decided] with the server's answer
+ * - a body that will never pass (400 and the other 4xx but 401, 403, 408 and 429): [AttributionResolution.Rejected]
+ * - the rest (503 while the server waits on a store, 401 and 403, 429, 5xx, no connection):
+ *   [AttributionResolution.RetryLater], up to the reporter's `maxAttempts`
  *
- * - anything else and no connection: [AttributionResolution.RetryLater] (503 while the server waits on a store, 429, 5xx)
+ * The `AppGrowStack-Client` header names kotlin-app-links and its version.
  */
 public class AppGrowStackAttributionResolver(private val stack: AppGrowStack) : AttributionResolver {
     private val json = Json { encodeDefaults = true; explicitNulls = false; ignoreUnknownKeys = true }
@@ -33,13 +36,13 @@ public class AppGrowStackAttributionResolver(private val stack: AppGrowStack) : 
         } catch (_: Exception) {
             return@withContext AttributionResolution.RetryLater
         }
-        when (response.status) {
-            200 -> runCatching { json.decodeFromString(Attribution.serializer(), response.body.toString(Charsets.UTF_8)) }
+        when (AppGrowStackAnswer.of(response.status)) {
+            AppGrowStackAnswer.Accepted -> runCatching { json.decodeFromString(Attribution.serializer(), response.body.toString(Charsets.UTF_8)) }
                 .getOrNull()
                 ?.let { AttributionResolution.Decided(it) }
                 ?: AttributionResolution.RetryLater
-            400 -> AttributionResolution.Rejected
-            else -> AttributionResolution.RetryLater
+            AppGrowStackAnswer.Rejected -> AttributionResolution.Rejected
+            AppGrowStackAnswer.RetryLater -> AttributionResolution.RetryLater
         }
     }
 }

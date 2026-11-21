@@ -16,6 +16,7 @@ import com.appgrowstack.support.SupportMessage
 import com.appgrowstack.support.SupportRecentEvent
 import com.appgrowstack.support.SupportRequest
 import com.appgrowstack.support.SupportSdk
+import com.appgrowstack.support.SupportSubmission
 import com.appgrowstack.support.SupportTicket
 import com.appgrowstack.support.SupportTransport
 import com.appgrowstack.support.SupportValue
@@ -76,7 +77,12 @@ public class AppGrowStackSupportTransport(
     /** Whether this install has ever sent a request (and so may have replies to read). */
     public val hasOwnerToken: Boolean get() = (tokens.load()?.length ?: 0) >= 32
 
-    override suspend fun submit(request: SupportRequest, context: SupportContext, lang: String): String {
+    /**
+     * Makes the request, then sends its images one by one. Throws only when the request was not
+     * made; an image that fails after that comes back in [SupportSubmission.unsentImages] (sending the
+     * whole form again would make a second request).
+     */
+    override suspend fun submit(request: SupportRequest, context: SupportContext, lang: String): SupportSubmission {
         val subject = request.subject?.trim()?.takeIf { it.isNotEmpty() }?.take(120)
         val email = request.email?.trim()?.takeIf { it.isNotEmpty() }
         val body = buildJsonObject {
@@ -91,8 +97,17 @@ public class AppGrowStackSupportTransport(
             put("context", json.encodeToJsonElement(SupportContext.serializer(), context.forSending()))
         }
         val created = call(post("/v1/support/tickets", body, token = false)) { it.jsonObject.getValue("ticket_id").jsonPrimitive.content }
-        for (image in request.images.take(4)) uploadImage(image, created)
-        return created
+        val unsent = request.images.take(4).filter { image ->
+            try {
+                uploadImage(image, created)
+                false
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: SupportError) {
+                true
+            }
+        }
+        return SupportSubmission(created, unsent)
     }
 
     override suspend fun tickets(): List<SupportTicket> {
@@ -109,6 +124,35 @@ public class AppGrowStackSupportTransport(
         call(
             withToken(stack.request("POST", "/v1/support/tickets/${enc(ticketId)}/attachments", SupportSdk.NAME, SupportSdk.VERSION, body = image.data, contentType = image.contentType)),
         ) { json.decodeFromJsonElement(SupportAttachment.serializer(), it) }
+
+    /**
+     * Sends what a person wrote: in a survey ([campaign] and the [choice] they picked, the id the
+     * sheet handed `CampaignEngine.answer`), or from a "send feedback" screen in settings (both `null`).
+     * No reply comes back; the words are sorted into topics on the server. Empty text is not sent.
+     *
+     * @return the feedback id, or `null` when there was nothing to send.
+     */
+    public suspend fun sendFeedback(
+        text: String,
+        campaign: String? = null,
+        choice: String? = null,
+        context: SupportContext,
+        lang: String,
+    ): String? {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return null
+        val body = buildJsonObject {
+            put("install_id", stack.installId)
+            uid()?.let { put("uid", it) }
+            put("lang", lang)
+            campaign?.let { put("campaign", it) }
+            // A choice belongs to a survey; without the campaign the server would refuse it.
+            if (campaign != null) choice?.let { put("choice", it) }
+            put("text", trimmed.take(2000))
+            put("context", json.encodeToJsonElement(SupportContext.serializer(), context.forSending()))
+        }
+        return call(post("/v1/support/feedback", body, token = false)) { it.jsonObject.getValue("feedback_id").jsonPrimitive.content }
+    }
 
     override suspend fun articles(lang: String): List<HelpArticle> =
         call(stack.request("GET", "/v1/support/articles", SupportSdk.NAME, SupportSdk.VERSION, query = mapOf("lang" to lang))) { decode(it, "articles", ListSerializer(HelpArticle.serializer())) }

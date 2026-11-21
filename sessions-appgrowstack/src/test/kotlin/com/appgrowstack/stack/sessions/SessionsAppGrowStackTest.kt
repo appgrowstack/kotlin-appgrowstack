@@ -82,15 +82,24 @@ class SessionsAppGrowStackTest {
 
     @Test
     fun aBatchThatWillNeverPassIsDropped() {
-        assertEquals(SessionSinkReply.Accepted(), answering(400, """{"error":{"code":"bad_request","message":"x"}}""").second.sessionSink().send(batch))
+        for (status in listOf(400, 404, 413)) {
+            assertEquals(SessionSinkReply.Accepted(), answering(status, """{"error":{"code":"bad_request","message":"x"}}""").second.sessionSink().send(batch))
+        }
     }
 
     @Test
-    fun busyServersUnreadableAnswersAndNoConnectionKeepTheBatch() {
-        for (status in listOf(429, 503)) {
+    fun anAnswerThisVersionCannotReadStillTakesTheBatch() {
+        // A newer server's `replay`: the batch arrived, so it must not stay at the head of the queue
+        assertEquals(SessionSinkReply.Accepted(), answering(200, """{"replay":"stream"}""").second.sessionSink().send(batch))
+        assertEquals(SessionSinkReply.Accepted(), answering(200, "{}").second.sessionSink().send(batch))
+    }
+
+    @Test
+    fun busyServersTheKeyAndNoConnectionKeepTheBatch() {
+        // 401 and 403 are the key or the project, fixed on the server: the same batch passes later
+        for (status in listOf(401, 403, 429, 503)) {
             assertEquals(status, assertFailsWith<AppGrowStackSessionSink.Failure> { answering(status).second.sessionSink().send(batch) }.status)
         }
-        assertEquals(200, assertFailsWith<AppGrowStackSessionSink.Failure> { answering(200, "{}").second.sessionSink().send(batch) }.status)
         assertFailsWith<IOException> { stack { throw IOException("offline") }.sessionSink().send(batch) }
     }
 }

@@ -7,18 +7,22 @@ import com.appgrowstack.sessions.SessionSink
 import com.appgrowstack.sessions.SessionSinkReply
 import com.appgrowstack.sessions.SessionsSdk
 import com.appgrowstack.stack.AppGrowStack
+import com.appgrowstack.stack.AppGrowStackAnswer
 import java.io.IOException
 
 /**
  * Sends the light record's batches to appgrowstack: `POST /v1/sessions/batches`. The batch goes with
  * [AppGrowStack.installId] as its `install_id`, whatever id the recorder kept.
  *
+ * The statuses are read with [AppGrowStackAnswer], the same table as every connector:
  * - 200: [SessionSinkReply.Accepted] with the server's replay decision and, when the policy came
- *   along, its `events.keep_props`
+ *   along, its `events.keep_props`. A body it cannot read (a `replay` it does not know) is
+ *   `Accepted()`: the batch arrived, and must not stay at the head of the queue
  * - 204: [SessionSinkReply.Disabled] (sessions are off or paused for the project)
- * - other 4xx (400, 413, …): `Accepted()`. The batch will never pass, so it is dropped instead of
- *   being sent on every launch
- * - 429, 5xx, no connection: throws, so the recorder keeps the batch and sends it again later
+ * - a body that will never pass (400, 413 and the other 4xx but 401, 403, 408 and 429): `Accepted()`.
+ *   It is dropped instead of being sent on every launch
+ * - 401, 403, 408, 429, 5xx, no connection: throws, so the recorder keeps the batch and sends it
+ *   again later
  *
  * The `AppGrowStack-Client` header names kotlin-app-sessions and its version
  * (`android/3.4.0/kotlin-app-sessions/0.1.0`), as every connector names the SDK it serves.
@@ -26,7 +30,7 @@ import java.io.IOException
  * Called on the recorder's sending thread (the request blocks).
  */
 public class AppGrowStackSessionSink(private val stack: AppGrowStack) : SessionSink {
-    /** Thrown for 429 and 5xx, and for a 200 whose body cannot be read. */
+    /** Thrown for an answer to send again later (401, 403, 408, 429, 5xx). */
     public class Failure(public val status: Int) : IOException("POST /v1/sessions/batches answered $status")
 
     override fun send(batch: SessionBatch): SessionSinkReply {
@@ -42,11 +46,11 @@ public class AppGrowStackSessionSink(private val stack: AppGrowStack) : SessionS
             contentType = "application/json",
         )
         val response = stack.send(request)
-        return when {
-            response.status == 200 -> readAnswer(response.body.toString(Charsets.UTF_8)) ?: throw Failure(200)
-            response.status == 204 -> SessionSinkReply.Disabled
-            response.status == 429 || response.status >= 500 -> throw Failure(response.status)
-            else -> SessionSinkReply.Accepted()
+        if (response.status == 204) return SessionSinkReply.Disabled
+        return when (AppGrowStackAnswer.of(response.status)) {
+            AppGrowStackAnswer.Accepted -> readAnswer(response.body.toString(Charsets.UTF_8)) ?: SessionSinkReply.Accepted()
+            AppGrowStackAnswer.Rejected -> SessionSinkReply.Accepted()
+            AppGrowStackAnswer.RetryLater -> throw Failure(response.status)
         }
     }
 

@@ -14,6 +14,7 @@ import com.appgrowstack.support.SupportError
 import com.appgrowstack.support.SupportImage
 import com.appgrowstack.support.SupportRequest
 import com.appgrowstack.support.SupportSdk
+import com.appgrowstack.support.SupportSubmission
 import com.appgrowstack.support.SupportTicketStatus
 import com.appgrowstack.support.SupportValue
 import kotlinx.coroutines.test.runTest
@@ -61,7 +62,7 @@ class SupportAppGrowStackTest {
             SupportRequest(SupportCategory.BILLING, subject = "  ", body = " 解約したい \n", email = " a@example.com ", images = listOf(SupportImage(byteArrayOf(1, 2, 3), "image/jpeg"))),
             context, "ja",
         )
-        assertEquals("tkt_0123456789abcdef", id)
+        assertEquals(SupportSubmission("tkt_0123456789abcdef"), id)
 
         val create = sent[0]
         assertEquals("POST", create.method)
@@ -88,6 +89,62 @@ class SupportAppGrowStackTest {
         assertEquals("image/jpeg", upload.headers["Content-Type"])
         assertEquals(tokens.load(), upload.headers["X-Support-Token"])
         assertTrue(upload.body!!.contentEquals(byteArrayOf(1, 2, 3)))
+    }
+
+    @Test
+    fun anImageThatFailsAfterTheRequestIsMadeComesBackInsteadOfThrowing() = runTest {
+        val (sent, stack) = answering(
+            201 to """{"ticket_id":"tkt_0123456789abcdef"}""",
+            503 to "",
+            201 to """{"id":"att_1","content_type":"image/png","bytes":1,"at":1}""",
+            201 to """{"id":"att_2","content_type":"image/jpeg","bytes":1,"at":1}""",
+        )
+        val transport = stack.supportTransport(tokens = MemorySupportTokenStore())
+        val first = SupportImage(byteArrayOf(1), "image/jpeg")
+        val second = SupportImage(byteArrayOf(2), "image/png")
+
+        val submission = transport.submit(SupportRequest(SupportCategory.BUG, body = "落ちる", images = listOf(first, second)), stack.supportContext(device)(null), "ja")
+        assertEquals(SupportSubmission("tkt_0123456789abcdef", listOf(first)), submission)
+
+        // One request was made; the image is sent to it again, not with a second request
+        for (image in submission.unsentImages) transport.uploadImage(image, submission.ticketId)
+        assertEquals(1, sent.count { it.url.endsWith("/v1/support/tickets") })
+        assertEquals(4, sent.size)
+    }
+
+    @Test
+    fun sendFeedbackSendsTheContractBodyWithoutAToken() = runTest {
+        val (sent, stack) = answering(
+            201 to """{"feedback_id":"fbk_0123456789abcdef","created_at":1}""",
+            201 to """{"feedback_id":"fbk_0123456789abcdeg","created_at":1}""",
+            429 to """{"error":{"code":"rate_limited","message":"1時間に5件まで"}}""",
+        )
+        val tokens = MemorySupportTokenStore()
+        val transport = stack.supportTransport(tokens = tokens)
+        val context = stack.supportContext(device)("survey")
+
+        val id = transport.sendFeedback(" 値段がもう少し安ければ \n", campaign = "survey-why-not-premium", choice = "choice_1", context = context, lang = "ja")
+        assertEquals("fbk_0123456789abcdef", id)
+        val request = sent[0]
+        assertEquals("POST", request.method)
+        assertEquals("https://api-staging.appgrowstack.com/v1/support/feedback", request.url)
+        assertEquals(null, request.headers["X-Support-Token"])
+        assertEquals("android/3.4.0/kotlin-app-support/${SupportSdk.VERSION}", request.headers["AppGrowStack-Client"])
+        val body = Json.parseToJsonElement(request.body!!.toString(Charsets.UTF_8)).jsonObject
+        assertEquals(setOf("install_id", "lang", "campaign", "choice", "text", "context"), body.keys)
+        assertEquals("a1b2c3d4-0000-4000-8000-00000000000f", body.getValue("install_id").jsonPrimitive.content)
+        assertEquals("値段がもう少し安ければ", body.getValue("text").jsonPrimitive.content)
+        assertEquals("choice_1", body.getValue("choice").jsonPrimitive.content)
+        assertEquals("survey", body.getValue("context").jsonObject.getValue("screen").jsonPrimitive.content)
+        assertEquals(null, tokens.load())
+
+        // From settings: no campaign, so no choice either. Nothing written: nothing sent.
+        transport.sendFeedback("同期が欲しい", choice = "choice_2", context = context, lang = "ja")
+        assertEquals(setOf("install_id", "lang", "text", "context"), Json.parseToJsonElement(sent[1].body!!.toString(Charsets.UTF_8)).jsonObject.keys)
+        assertEquals(null, transport.sendFeedback("  \n", context = context, lang = "ja"))
+        assertEquals(2, sent.size)
+
+        assertEquals(SupportError.RateLimited, assertFailsWith<SupportError> { transport.sendFeedback("x", context = context, lang = "ja") })
     }
 
     @Test

@@ -23,7 +23,9 @@ kotlin-app-*のライブラリはどれも単体で動きます。このライ�
 | モジュール | ライブラリ | 足す物 |
 |---|---|---|
 | `appgrowstack-core` | なし | `AppGrowStack`・`AppGrowStackApp`・`AppGrowStackEnvironment`・`AppGrowStackStorage` |
-| `campaign-appgrowstack` | kotlin-app-campaign | `stack.campaignSource(fallback)`: 組をサーバーから取る（ETag・304）。最初の取得が通るまでは同梱した組を使う |
+| `campaign-appgrowstack` | kotlin-app-campaign | `stack.campaignSource(fallback)`: 組をサーバーから取る（ETag・304）。最初の取得が通るまでは同梱した組を使う。`stack.campaignContext`: 初めて見た日を入れたエンジンの文脈 |
+| `links-appgrowstack` | kotlin-app-links | `stack.attributionResolver()`: 入れた人の流入元をサーバーで決める（`POST /v1/links/attributions`） |
+| `support-appgrowstack` | kotlin-app-support | `stack.supportTransport(uid, tokens)`: 問い合わせ・スクリーンショット・持ち主の鍵で読む返事・ヘルプの記事（`/v1/support/*`）。`stack.supportContext(device)`: つなぐ型の直近の記録を添えた文脈 |
 | `sessions-appgrowstack` | kotlin-app-sessions | `stack.sessionSink()`: 軽い記録のバッチを送る `SessionSink`（`POST /v1/sessions/batches`）。サーバーが決めたリプレイの要否と残すプロパティを返す |
 
 ## はじめに

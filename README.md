@@ -30,7 +30,9 @@ library.
 | Module | Library | What it adds |
 |---|---|---|
 | `appgrowstack-core` | none | `AppGrowStack`, `AppGrowStackApp`, `AppGrowStackEnvironment`, `AppGrowStackStorage` |
-| `campaign-appgrowstack` | kotlin-app-campaign | `stack.campaignSource(fallback)`: the set fetched from the server (ETag, 304), the bundled set until the first fetch succeeds |
+| `campaign-appgrowstack` | kotlin-app-campaign | `stack.campaignSource(fallback)`: the set fetched from the server (ETag, 304), the bundled set until the first fetch succeeds. `stack.campaignContext`: the engine's context with the first-seen date |
+| `links-appgrowstack` | kotlin-app-links | `stack.attributionResolver()`: the install's source decided on the server (`POST /v1/links/attributions`) |
+| `support-appgrowstack` | kotlin-app-support | `stack.supportTransport(uid, tokens)`: requests, screenshots, replies with the owner token and help articles on `/v1/support/*`. `stack.supportContext(device)`: the context with the stack's recent activity |
 | `sessions-appgrowstack` | kotlin-app-sessions | `stack.sessionSink()`: the `SessionSink` that sends the light record's batches (`POST /v1/sessions/batches`) and hands back the server's replay decision and kept properties |
 
 ## Quick Start

@@ -1,5 +1,6 @@
 package com.appgrowstack.stack.campaign
 
+import com.appgrowstack.campaign.CampaignContext
 import com.appgrowstack.campaign.CampaignFetchResult
 import com.appgrowstack.campaign.CampaignSdk
 import com.appgrowstack.campaign.CampaignSetFetchFailure
@@ -54,3 +55,22 @@ public class AppGrowStackCampaignSetFetcher(
  */
 public fun AppGrowStack.campaignSource(fallback: CampaignSetFetcher? = null): AppGrowStackCampaignSetFetcher =
     AppGrowStackCampaignSetFetcher(this, fallback)
+
+/**
+ * The context for `CampaignEngine(context = …)`, from the stack's values: the build, the channel, the
+ * language and region, whether this is an internal device (read now), the clock's time zone, and the
+ * first-seen date (the earlier of the app's date and the stored one), so `days_since_first_seen`
+ * counts from when the person really started.
+ */
+public val AppGrowStack.campaignContext: CampaignContext
+    get() = CampaignContext(
+        appVersion = app.version,
+        build = app.build,
+        channel = app.channel.wire,
+        lang = app.lang,
+        region = app.region ?: "",
+        timeZone = clock.zone,
+        internalDevice = isInternalDevice(),
+        platform = app.platform,
+        firstSeenAt = firstSeenAt.toEpochMilli(),
+    )

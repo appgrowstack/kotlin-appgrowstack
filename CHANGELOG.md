@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `campaign-appgrowstack`: `stack.campaignContext`, the engine's context from the stack's values
+  (the clock's time zone, the first-seen date, whether the device is internal).
+- `links-appgrowstack` (kotlin-app-links 0.1): `stack.attributionResolver()` decides the install's
+  source with `POST /v1/links/attributions` (the stack's install id and platform). 200 is decided,
+  400 is rejected, anything else and a failed connection are tried on a later launch.
+- `support-appgrowstack` (kotlin-app-support 0.1): `stack.supportTransport(uid, tokens)` (requests,
+  screenshots, replies with the owner token kept by the app's `SupportTokenStore`, help articles on
+  `/v1/support/*`) and `stack.supportContext(device)` (the context with the stack's recent activity).
+
 ## [0.1.0] - 2026-11-21
 
 ### Added

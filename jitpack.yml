@@ -2,4 +2,4 @@
 jdk:
   - openjdk21
 install:
-  - ./gradlew :appgrowstack-core:publishToMavenLocal :campaign-appgrowstack:publishToMavenLocal :sessions-appgrowstack:publishToMavenLocal -Pversion=$VERSION
+  - ./gradlew :appgrowstack-core:publishToMavenLocal :campaign-appgrowstack:publishToMavenLocal :links-appgrowstack:publishToMavenLocal :support-appgrowstack:publishToMavenLocal :sessions-appgrowstack:publishToMavenLocal -Pversion=$VERSION

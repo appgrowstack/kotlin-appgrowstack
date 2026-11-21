@@ -1,6 +1,7 @@
 package com.appgrowstack.stack.campaign
 
 import com.appgrowstack.campaign.BundledCampaignSetFetcher
+import com.appgrowstack.campaign.CampaignContext
 import com.appgrowstack.campaign.CampaignFetchResult
 import com.appgrowstack.campaign.CampaignSdk
 import com.appgrowstack.campaign.CampaignSetFetchFailure
@@ -10,8 +11,12 @@ import com.appgrowstack.stack.AppGrowStackEnvironment
 import com.appgrowstack.stack.AppGrowStackHttp
 import com.appgrowstack.stack.AppGrowStackRequest
 import com.appgrowstack.stack.AppGrowStackResponse
+import com.appgrowstack.stack.MemoryAppGrowStackStorage
 import kotlinx.coroutines.test.runTest
 import java.io.IOException
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -50,6 +55,25 @@ class CampaignAppGrowStackTest {
         assertEquals("android/2.1.0/kotlin-app-campaign/${CampaignSdk.VERSION}", client)
         assertTrue(clientPattern.matches(client))
         assertEquals("\"v4\"", sent[1].headers["If-None-Match"])
+    }
+
+    @Test
+    fun contextCarriesTheBuildAndTheEarlierFirstSeenDate() {
+        val earlier = Instant.parse("2023-11-14T22:13:20Z")
+        val zone = ZoneId.of("Asia/Tokyo")
+        val stack = AppGrowStack(
+            "pk_KUdMabcdefghijklmnopqrst", AppGrowStackEnvironment.Production, "a1",
+            firstSeenAt = earlier,
+            app = app.copy(region = "JP"),
+            clock = Clock.fixed(Instant.parse("2026-12-10T03:00:00Z"), zone),
+            isInternalDevice = { true },
+            storage = MemoryAppGrowStackStorage(Instant.parse("2025-10-09T09:06:40Z")),
+            http = { AppGrowStackResponse(500, ByteArray(0)) },
+        )
+        assertEquals(
+            CampaignContext("2.1.0", "21", "play", "ja", "JP", zone, internalDevice = true, firstSeenAt = earlier.toEpochMilli()),
+            stack.campaignContext,
+        )
     }
 
     @Test

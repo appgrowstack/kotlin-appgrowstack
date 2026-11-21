@@ -10,7 +10,8 @@ import com.appgrowstack.stack.AppGrowStack
 import java.io.IOException
 
 /**
- * Sends the light record's batches to appgrowstack: `POST /v1/sessions/batches`.
+ * Sends the light record's batches to appgrowstack: `POST /v1/sessions/batches`. The batch goes with
+ * [AppGrowStack.installId] as its `install_id`, whatever id the recorder kept.
  *
  * - 200: [SessionSinkReply.Accepted] with the server's replay decision and, when the policy came
  *   along, its `events.keep_props`
@@ -29,12 +30,15 @@ public class AppGrowStackSessionSink(private val stack: AppGrowStack) : SessionS
     public class Failure(public val status: Int) : IOException("POST /v1/sessions/batches answered $status")
 
     override fun send(batch: SessionBatch): SessionSinkReply {
+        // The recorder keeps its own id when the app does not hand it one. Send the stack's, so the light record
+        // joins the same install as the analytics, links and support on the server
+        val sent = batch.copy(session = batch.session.copy(installId = stack.installId))
         val request = stack.request(
             "POST",
             "/v1/sessions/batches",
             SessionsSdk.NAME,
             SessionsSdk.VERSION,
-            body = batch.jsonText().toByteArray(Charsets.UTF_8),
+            body = sent.jsonText().toByteArray(Charsets.UTF_8),
             contentType = "application/json",
         )
         val response = stack.send(request)

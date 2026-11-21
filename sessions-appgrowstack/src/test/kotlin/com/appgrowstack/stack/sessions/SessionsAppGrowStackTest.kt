@@ -44,6 +44,14 @@ class SessionsAppGrowStackTest {
     )
 
     @Test
+    fun theBatchGoesWithTheStacksInstallId() {
+        val (sent, stack) = answering(200, """{"replay":"buffer"}""")
+        val own = batch.copy(session = batch.session.copy(installId = "ffffffff-0000-4000-8000-000000000001"))
+        stack.sessionSink().send(own)
+        assertEquals(batch.jsonText(), sent.single().body!!.toString(Charsets.UTF_8))
+    }
+
+    @Test
     fun postsTheBatchAsItsJson() {
         val (sent, stack) = answering(200, """{"replay":"buffer"}""")
         assertEquals(SessionSinkReply.Accepted(SessionReplayMode.BUFFER, null), stack.sessionSink().send(batch))

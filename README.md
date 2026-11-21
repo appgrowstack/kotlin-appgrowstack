@@ -1,63 +1,107 @@
 # kotlin-appgrowstack
 
+Connect the kotlin-app-* libraries to appgrowstack, adding only the connector modules of the libraries you use.
+
 [Japanese](./README.ja.md)
 
-Connects the kotlin-app-* SDKs (kotlin-app-campaign, kotlin-app-links, kotlin-app-support, …) to
-appgrowstack. Each SDK works on its own; this library adds the parts that talk to the server.
-
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.4-purple.svg)
+![JVM](https://img.shields.io/badge/JVM-17-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-> Developed in a private monorepo and copied here one way. Issues are welcome; pull requests are
-> not accepted.
+Each kotlin-app-* library works on its own. This library adds the parts that talk to the
+appgrowstack server: one `AppGrowStack` value in `appgrowstack-core`, and one connector module per
+library.
 
 ## Features
 
-- **One value to connect.** `AppGrowStack` takes the public key, the environment, the install id
-  and the app's clock once. Every connector module reads them from it
-- **One module per SDK.** Add only the connector modules of the SDKs you use; each pulls in only
-  its own SDK
-- **Shared context.** The install id is lowercased in one place, the first-seen date is the earliest
-  one known, and recent events and campaigns shown are kept for the support connector
+- **One value to connect.** `AppGrowStack` takes the public key, the environment, the install id and
+  the app's clock once. Every connector module reads them from it
+- **One module per library.** Add only the connector modules of the libraries you use; each pulls in
+  only its own library
+- **Shared context.** The install id is lowercased in one place, and the first-seen date is the
+  earliest one known. Pass an `AppGrowStackStorage` to keep it between launches; the default keeps
+  it in memory
+- **Environments.** `AppGrowStackEnvironment.Production`, `Staging` and `Local(baseUrl)`. Every
+  request carries the public key and the `AppGrowStack-Client` header
+- **Kotlin/JVM only.** No Android dependency, so headless tests run the connectors on the JVM
+
+### Connectors
+
+| Module | Library | What it adds |
+|---|---|---|
+| `appgrowstack-core` | none | `AppGrowStack`, `AppGrowStackApp`, `AppGrowStackEnvironment`, `AppGrowStackStorage` |
+| `campaign-appgrowstack` | kotlin-app-campaign | `stack.campaignSource(fallback)`: the set fetched from the server (ETag, 304), the bundled set until the first fetch succeeds |
+| `sessions-appgrowstack` | kotlin-app-sessions | `stack.sessionSink()`: the `SessionSink` that sends the light record's batches (`POST /v1/sessions/batches`) and hands back the server's replay decision and kept properties |
 
 ## Quick Start
 
 ```kotlin
+import com.appgrowstack.campaign.BundledCampaignSetFetcher
+import com.appgrowstack.stack.AppGrowStack
+import com.appgrowstack.stack.AppGrowStackApp
+import com.appgrowstack.stack.AppGrowStackEnvironment
+import com.appgrowstack.stack.campaign.campaignSource
+import com.appgrowstack.stack.sessions.sessionSink
+
 val stack = AppGrowStack(
     publicKey = "pk_…",
     environment = AppGrowStackEnvironment.Production,
-    installId = installId,
-    app = AppGrowStackApp(version = BuildConfig.VERSION_NAME, build = "${BuildConfig.VERSION_CODE}", channel = AppGrowStackApp.Channel.Play, lang = "ja"),
+    installId = installId,                // the id your analytics uses for this install
+    app = AppGrowStackApp(
+        version = BuildConfig.VERSION_NAME,
+        build = BuildConfig.VERSION_CODE.toString(),
+        channel = AppGrowStackApp.Channel.Play,
+        lang = "en",
+    ),
 )
+
+// campaign-appgrowstack: pass it as CampaignEngine(fetcher = …)
+val fetcher = stack.campaignSource(
+    fallback = BundledCampaignSetFetcher { assets.open("campaigns.json").bufferedReader().use { it.readText() } },
+)
+
+// sessions-appgrowstack: pass it as AppSessions(sink = …)
+val sink = stack.sessionSink()
 ```
 
-## Connectors
+## Documentation
 
-| Module | SDK | What it adds |
-|---|---|---|
-| `campaign-appgrowstack` | kotlin-app-campaign | `stack.campaignSource(fallback)`: the set fetched from the server (ETag, 304), the bundled set until the first fetch succeeds |
-| `sessions-appgrowstack` | kotlin-app-sessions | `stack.sessionSink()`: the `SessionSink` that sends the light record's batches (`POST /v1/sessions/batches`) and hands back the server's replay decision and kept properties |
-
-```kotlin
-val campaigns = CampaignEngine(fetcher = stack.campaignSource(BundledCampaignSetFetcher { readAsset("campaigns.json") }), …)
-```
+The API reference is the KDoc in each module's `src/main`. Changes are listed in
+[CHANGELOG.md](./CHANGELOG.md).
 
 ## Installation
 
-From [JitPack](https://jitpack.io/#appgrowstack/kotlin-appgrowstack). Add `appgrowstack-core` and the connector module of each SDK you use.
+The modules are published through [JitPack](https://jitpack.io/#appgrowstack/kotlin-appgrowstack).
+Add the repository in `settings.gradle.kts`:
+
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven("https://jitpack.io")
+    }
+}
+```
+
+Then add the connector module of each library you use in the app's `build.gradle.kts`. Each
+connector module includes `appgrowstack-core`:
 
 ```kotlin
 dependencies {
-    implementation("com.github.appgrowstack.kotlin-appgrowstack:appgrowstack-core:0.1.0")
     implementation("com.github.appgrowstack.kotlin-appgrowstack:campaign-appgrowstack:0.1.0")
+    implementation("com.github.appgrowstack.kotlin-appgrowstack:sessions-appgrowstack:0.1.0")
+    // appgrowstack-core alone
+    // implementation("com.github.appgrowstack.kotlin-appgrowstack:appgrowstack-core:0.1.0")
 }
 ```
 
 ## Requirements
 
-- JVM 17+ (Android API 26+)
+- JDK 17+
+- Android: minSdk 26 for `java.time`, or core library desugaring
 - Kotlin 2.4+
 
 ## License
 
-MIT
+MIT. See [LICENSE](./LICENSE).

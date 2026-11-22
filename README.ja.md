@@ -16,6 +16,7 @@ kotlin-app-*のライブラリはどれも単体で動きます。このライ�
 - **ライブラリごとにモジュールが1つ。** 使うライブラリのコネクターのモジュールだけを足します。どのモジュールも自分のライブラリだけを取り込みます
 - **共通の情報。** install idの小文字への揃えは1か所で行い、初回の日付は知っている中で一番早い物にします。起動をまたいで保存するときは `AppGrowStackStorage` を渡します。指定しなければメモリーにだけ持ちます
 - **環境。** `AppGrowStackEnvironment.Production`・`Staging`・`Local(baseUrl)`。どのリクエストにも公開キーと `AppGrowStack-Client` のヘッダーを付けます
+- **本人の端末。**どのリクエストにも`AppGrowStack-Device`（`stack.deviceHash`）と`AppGrowStack-Install`（install id）のヘッダーも付けます。appgrowstackはこれで本人の端末を数から外し、利用者だけを数えます。`deviceId`に`Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)`を渡します。同じ署名のキーで入れ直しても、アカウントを作り直しても変わりません。送るのは`sha256(公開キー+ ":" +端末のid)`だけで、端末のidそのものは端末の外に出ません。本人は、appgrowstackのconsoleの本人のリンクをその端末で開き、同じネットワークのままアプリを開いて、端末に1回だけマークを付けます。`deviceId`を渡さなければ、乱数を`AppGrowStackStorage.deviceId`に置きます（そのときは入れ直すと変わります）
 - **答えの読み方は1つの表。** `AppGrowStackAnswer` がどのコネクターでも同じに読みます。2xxは終わり、401・403・408・429・5xxは後で送り直し、ほかの4xxは捨てます
 - **Kotlin/JVMだけ。** Androidに依存しないので、headlessのテストからJVMでコネクターを動かせます
 
@@ -33,6 +34,7 @@ kotlin-app-*のライブラリはどれも単体で動きます。このライ�
 ## はじめに
 
 ```kotlin
+import android.provider.Settings
 import com.appgrowstack.campaign.BundledCampaignSetFetcher
 import com.appgrowstack.stack.AppGrowStack
 import com.appgrowstack.stack.AppGrowStackApp
@@ -45,6 +47,7 @@ val stack = AppGrowStack(
     publicKey = "pk_…",
     environment = AppGrowStackEnvironment.Production,
     installId = installId,                // the id your analytics uses for this install
+    deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID),
     app = AppGrowStackApp(
         version = BuildConfig.VERSION_NAME,
         build = BuildConfig.VERSION_CODE.toString(),

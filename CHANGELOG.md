@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `appgrowstack-core`: every request carries `AppGrowStack-Device` (`stack.deviceHash`,
+  `sha256(publicKey + ":" + device id)` in lowercase hex) and `AppGrowStack-Install` (the install id),
+  so the server can tell the owner's own devices from real users. `AppGrowStack` takes `deviceId`:
+  pass `Settings.Secure.ANDROID_ID` (the same for every reinstall signed with the same key). Without it,
+  a random id is kept in `AppGrowStackStorage.deviceId` (a new property with a default that keeps
+  nothing, so existing storages still compile).
+
 ## [0.3.0] - 2026-11-22
 
 ### Added

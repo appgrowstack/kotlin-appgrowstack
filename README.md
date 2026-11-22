@@ -23,6 +23,14 @@ library.
   it in memory
 - **Environments.** `AppGrowStackEnvironment.Production`, `Staging` and `Local(baseUrl)`. Every
   request carries the public key and the `AppGrowStack-Client` header
+- **The owner's own devices.** Every request also carries `AppGrowStack-Device` (`stack.deviceHash`)
+  and `AppGrowStack-Install` (the install id), so appgrowstack can count only real users and keep the
+  owner's own devices out of the numbers. Pass `deviceId = Settings.Secure.getString(contentResolver,
+  Settings.Secure.ANDROID_ID)`: it stays the same when the app is installed again with the same signing
+  key and when a new account is made. Only `sha256(public key + ":" + device id)` is sent; the raw id
+  never leaves the device. The owner marks a device once by opening the owner link from the
+  appgrowstack console on that device and then opening the app on the same network. Without a
+  `deviceId`, a random id is kept in `AppGrowStackStorage.deviceId` (it then changes on reinstall)
 - **One answer table.** `AppGrowStackAnswer` reads every status the same way in every connector:
   2xx is done, 401, 403, 408, 429 and 5xx are sent again later, and any other 4xx is dropped
 - **Kotlin/JVM only.** No Android dependency, so headless tests run the connectors on the JVM
@@ -41,6 +49,7 @@ library.
 ## Quick Start
 
 ```kotlin
+import android.provider.Settings
 import com.appgrowstack.campaign.BundledCampaignSetFetcher
 import com.appgrowstack.stack.AppGrowStack
 import com.appgrowstack.stack.AppGrowStackApp
@@ -53,6 +62,7 @@ val stack = AppGrowStack(
     publicKey = "pk_…",
     environment = AppGrowStackEnvironment.Production,
     installId = installId,                // the id your analytics uses for this install
+    deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID),
     app = AppGrowStackApp(
         version = BuildConfig.VERSION_NAME,
         build = BuildConfig.VERSION_CODE.toString(),

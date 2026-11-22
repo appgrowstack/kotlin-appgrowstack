@@ -30,7 +30,7 @@ class CampaignAppGrowStackTest {
     private val app = AppGrowStackApp(version = "2.1.0", build = "21", channel = AppGrowStackApp.Channel.Play, lang = "ja")
 
     private fun stack(http: AppGrowStackHttp) =
-        AppGrowStack("pk_KUdMabcdefghijklmnopqrst", AppGrowStackEnvironment.Production, "a1", app = app, http = http)
+        AppGrowStack("pk_KUdMabcdefghijklmnopqrst", AppGrowStackEnvironment.Production, "a1", app = app, deviceId = "abc", http = http)
 
     private val bundledJson = """{"version":1,"campaigns":[]}"""
     private val bundled = BundledCampaignSetFetcher { bundledJson }
@@ -50,6 +50,9 @@ class CampaignAppGrowStackTest {
         assertEquals("GET", first.method)
         assertEquals("https://api.appgrowstack.com/v1/campaigns/sets/pk_KUdMabcdefghijklmnopqrst", first.url)
         assertNull(first.headers["Authorization"])
+        // The set is the same for everyone; the device headers are only read on the server
+        assertEquals(AppGrowStack.deviceHash("pk_KUdMabcdefghijklmnopqrst", "abc"), first.headers["AppGrowStack-Device"])
+        assertEquals("a1", first.headers["AppGrowStack-Install"])
         assertNull(first.headers["If-None-Match"])
         val client = first.headers.getValue("AppGrowStack-Client")
         assertEquals("android/2.1.0/kotlin-app-campaign/${CampaignSdk.VERSION}", client)

@@ -3,6 +3,7 @@ package com.appgrowstack.stack
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URLEncoder
+import java.security.MessageDigest
 import java.time.Clock
 import java.time.Instant
 
@@ -17,6 +18,10 @@ import java.time.Instant
  * @param firstSeenAt when the person first used the app, if the app knew it before this value
  *   existed. The earlier of this and the stored date is kept.
  * @param clock the app's clock. Connectors pass it on (the campaign engine waits with it).
+ * @param deviceId the device's id that stays the same when the app is installed again. Pass
+ *   `Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)` (the same value for every
+ *   reinstall signed with the same key). Null or blank keeps a random id in [storage] instead, which
+ *   changes on reinstall. Only [deviceHash] leaves the device.
  */
 public class AppGrowStack(
     public val publicKey: String,
@@ -27,6 +32,7 @@ public class AppGrowStack(
     public val clock: Clock = Clock.systemUTC(),
     public val isInternalDevice: () -> Boolean = { false },
     storage: AppGrowStackStorage = MemoryAppGrowStackStorage(),
+    deviceId: String? = null,
     private val http: AppGrowStackHttp = UrlConnectionAppGrowStackHttp(),
 ) {
     /** Always lowercase (the contract's form), whatever case the app passed. */
@@ -37,6 +43,14 @@ public class AppGrowStack(
 
     /** Recent events and campaigns shown, written by the analytics and campaign connectors. */
     public val activity: AppGrowStackActivity = AppGrowStackActivity()
+
+    /**
+     * `sha256(publicKey + ":" + device id)` in lowercase hex (64 characters), sent as
+     * `AppGrowStack-Device` on every request. The server uses it to tell the owner's own devices from
+     * real users. The raw id never leaves the device; hashing with the public key gives each project a
+     * different value.
+     */
+    public val deviceHash: String = Companion.deviceHash(publicKey, deviceId?.takeIf { it.isNotBlank() } ?: storedDeviceId(storage))
 
     init {
         val stored = storage.firstSeenAt
@@ -57,8 +71,9 @@ public class AppGrowStack(
     public fun clientHeader(sdk: String, version: String): String = "${app.platform}/${app.version}/$sdk/$version"
 
     /**
-     * A request to [path] under the environment's root, with the public key and the client header
-     * naming [sdk] at [version] ([clientHeader]).
+     * A request to [path] under the environment's root, with the public key, the client header
+     * naming [sdk] at [version] ([clientHeader]), `AppGrowStack-Device` ([deviceHash]) and
+     * `AppGrowStack-Install` ([installId]). The answer does not change with the last two.
      */
     public fun request(
         method: String,
@@ -73,6 +88,8 @@ public class AppGrowStack(
         val headers = buildMap {
             put("Authorization", "Bearer $publicKey")
             put("AppGrowStack-Client", clientHeader(sdk, version))
+            put("AppGrowStack-Device", deviceHash)
+            put("AppGrowStack-Install", installId)
             if (contentType != null) put("Content-Type", contentType)
         }
         return AppGrowStackRequest(method, environment.baseUrl.trimEnd('/') + path + q, headers, body)
@@ -82,6 +99,15 @@ public class AppGrowStack(
     public fun send(request: AppGrowStackRequest): AppGrowStackResponse = http.send(request)
 
     private fun enc(s: String) = URLEncoder.encode(s, Charsets.UTF_8).replace("+", "%20")
+
+    public companion object {
+        /** `sha256(publicKey + ":" + deviceId)` in lowercase hex (the contract's `DeviceHash`). */
+        public fun deviceHash(publicKey: String, deviceId: String): String =
+            MessageDigest.getInstance("SHA-256").digest("$publicKey:$deviceId".toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
+
+        private fun storedDeviceId(storage: AppGrowStackStorage): String =
+            storage.deviceId ?: java.util.UUID.randomUUID().toString().also { storage.deviceId = it }
+    }
 }
 
 /** Which appgrowstack the connectors talk to. Only the root URL; each connector adds its path. */
@@ -116,10 +142,18 @@ public data class AppGrowStackApp(
 /** What [AppGrowStack] keeps between launches. */
 public interface AppGrowStackStorage {
     public var firstSeenAt: Instant?
+
+    /** A random device id, used only when the app passes no `deviceId` (or a blank one). Not kept by default. */
+    public var deviceId: String?
+        get() = null
+        set(@Suppress("UNUSED_PARAMETER") value) {}
 }
 
 /** In memory. Android apps pass one backed by SharedPreferences or DataStore. */
-public class MemoryAppGrowStackStorage(override var firstSeenAt: Instant? = null) : AppGrowStackStorage
+public class MemoryAppGrowStackStorage(
+    override var firstSeenAt: Instant? = null,
+    override var deviceId: String? = null,
+) : AppGrowStackStorage
 
 public class AppGrowStackRequest(
     public val method: String,

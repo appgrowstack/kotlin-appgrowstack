@@ -43,7 +43,7 @@ library.
 | `campaign-appgrowstack` | kotlin-app-campaign | `stack.campaignSource(fallback)`: the set fetched from the server (ETag, 304), the bundled set until the first fetch succeeds. `stack.campaignContext`: the engine's context with the first-seen date |
 | `links-appgrowstack` | kotlin-app-links | `stack.attributionResolver()`: the install's source decided on the server (`POST /v1/links/attributions`). Give `AttributionReporter` the stack's `firstSeenAt` as `firstOpenAt` |
 | `support-appgrowstack` | kotlin-app-support | `stack.supportTransport(uid, tokens)`: requests, screenshots, replies with the owner token and help articles on `/v1/support/*`, and `sendFeedback(text, campaign, choice, context, lang)` for what a person wrote in a survey or a feedback screen (`POST /v1/support/feedback`). `stack.supportContext(device)`: the context with the stack's recent activity |
-| `sessions-appgrowstack` | kotlin-app-sessions | `stack.sessionSink()`: the `SessionSink` that sends the light record's batches (`POST /v1/sessions/batches`) and hands back the server's replay decision and kept properties |
+| `sessions-appgrowstack` | kotlin-app-sessions | `stack.sessionSink()`: the `SessionSink` that sends the light record's batches (`POST /v1/sessions/batches`) and hands back the server's replay decision, kept properties, `upload_token` and live offer. `stack.sessionReplaySink()`: the `SessionReplaySink` that sends the recording's segments (`PUT /v1/sessions/<session_id>/segments/<seq>`) |
 | `config-appgrowstack` | kotlin-app-config | `stack.configSource()`: the config set fetched from the server (`GET /v1/config/sets/<public key>`, ETag, 304). `stack.configFacts()`: the device values for the rules |
 
 ## Quick Start
@@ -56,6 +56,7 @@ import com.appgrowstack.stack.AppGrowStackApp
 import com.appgrowstack.stack.AppGrowStackEnvironment
 import com.appgrowstack.stack.campaign.campaignSource
 import com.appgrowstack.stack.config.configSource
+import com.appgrowstack.stack.sessions.sessionReplaySink
 import com.appgrowstack.stack.sessions.sessionSink
 
 val stack = AppGrowStack(
@@ -76,8 +77,9 @@ val fetcher = stack.campaignSource(
     fallback = BundledCampaignSetFetcher { assets.open("campaigns.json").bufferedReader().use { it.readText() } },
 )
 
-// sessions-appgrowstack: pass it as AppSessions(sink = …)
+// sessions-appgrowstack: pass it as AppSessions(sink = …), and the recording's as SessionReplayRecorder(sink = …)
 val sink = stack.sessionSink()
+val replaySink = stack.sessionReplaySink()
 
 // config-appgrowstack: pass it as AppConfig(source = …)
 val source = stack.configSource()

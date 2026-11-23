@@ -3,6 +3,8 @@ package com.appgrowstack.stack.sessions
 import com.appgrowstack.sessions.SessionBatch
 import com.appgrowstack.sessions.SessionDevice
 import com.appgrowstack.sessions.SessionDeviceInfo
+import com.appgrowstack.sessions.SessionReplayUpload
+import com.appgrowstack.sessions.SessionReplayUploadReply
 import com.appgrowstack.sessions.SessionReplayMode
 import com.appgrowstack.sessions.SessionScreen
 import com.appgrowstack.sessions.SessionSinkReply
@@ -101,5 +103,74 @@ class SessionsAppGrowStackTest {
             assertEquals(status, assertFailsWith<AppGrowStackSessionSink.Failure> { answering(status).second.sessionSink().send(batch) }.status)
         }
         assertFailsWith<IOException> { stack { throw IOException("offline") }.sessionSink().send(batch) }
+    }
+
+    // ---- The recording
+
+    private val token = "1795920000." + "0123456789abcdef".repeat(4)
+
+    @Test
+    fun theFirstAnswerCarriesTheUploadTokenAndLive() {
+        val answer = """{"replay":"buffer","upload_token":"$token","live":{"token":"$token","url":"wss://api-staging.appgrowstack.com/v1/sessions/live"}}"""
+        val reply = answering(200, answer).second.sessionSink().send(batch) as SessionSinkReply.Accepted
+        assertEquals(SessionReplayMode.BUFFER, reply.replay)
+        assertEquals(token, reply.uploadToken)
+        val live = reply.live!!
+        assertEquals("wss://api-staging.appgrowstack.com/v1/sessions/live", live.url)
+        assertEquals(token, live.token)
+        assertEquals("Bearer pk_KUdMabcdefghijklmnopqrst", live.headers["Authorization"])
+        assertEquals("a1b2c3d4-0000-4000-8000-00000000000f", live.headers["X-Session-Install"])
+        assertEquals("android/3.4.0/kotlin-app-sessions/${SessionsSdk.VERSION}", live.headers["AppGrowStack-Client"])
+    }
+
+    @Test
+    fun aPolicyWithoutTheRecordingAnswersNone() {
+        val answer = """{"replay":"buffer","upload_token":"$token","policy":{"replay":{"enabled":false,"sample":0,"daily_cap":0,"daily_bytes":0},"events":{"keep_props":{}}}}"""
+        val reply = answering(200, answer).second.sessionSink().send(batch) as SessionSinkReply.Accepted
+        assertEquals(SessionReplayMode.NONE, reply.replay)
+        assertEquals(token, reply.uploadToken)
+    }
+
+    @Test
+    fun aTokenOfTheWrongShapeIsNotKept() {
+        val reply = answering(200, """{"replay":"record","upload_token":"x","live":{"token":"x","url":"https://x"}}""").second.sessionSink().send(batch) as SessionSinkReply.Accepted
+        assertEquals(SessionSinkReply.Accepted(SessionReplayMode.RECORD), reply)
+    }
+
+    private val upload = SessionReplayUpload("ses_abcdefghijklmnopqrst", 3, "ffffffff-0000-4000-8000-000000000001", token, byteArrayOf(0x41, 0x47, 0x53, 0x52, 1))
+
+    @Test
+    fun putsTheSegmentWithTheInstallAndTheToken() {
+        val (sent, stack) = answering(204)
+        assertEquals(SessionReplayUploadReply.UPLOADED, stack.sessionReplaySink().upload(upload))
+        val request = sent.single()
+        assertEquals("PUT", request.method)
+        assertEquals("https://api-staging.appgrowstack.com/v1/sessions/ses_abcdefghijklmnopqrst/segments/3", request.url)
+        assertEquals("Bearer pk_KUdMabcdefghijklmnopqrst", request.headers["Authorization"])
+        assertEquals("application/vnd.appgrowstack.replay-segment", request.headers["Content-Type"])
+        // The stack's install id, as the batches went with it, not the one the recorder kept
+        assertEquals("a1b2c3d4-0000-4000-8000-00000000000f", request.headers["X-Session-Install"])
+        assertEquals(token, request.headers["X-Session-Upload"])
+        assertEquals(upload.bytes.toList(), request.body!!.toList())
+    }
+
+    @Test
+    fun theStatusesOfASegment() {
+        assertEquals(SessionReplayUploadReply.FORBIDDEN, answering(403).second.sessionReplaySink().upload(upload))
+        for (status in listOf(400, 404, 413, 415)) {
+            assertEquals(SessionReplayUploadReply.REJECTED, answering(status).second.sessionReplaySink().upload(upload))
+        }
+        for (status in listOf(401, 408, 429, 500, 503)) {
+            assertEquals(status, assertFailsWith<AppGrowStackSessionSink.Failure> { answering(status).second.sessionReplaySink().upload(upload) }.status)
+        }
+        assertFailsWith<IOException> { stack { throw IOException("offline") }.sessionReplaySink().upload(upload) }
+    }
+
+    @Test
+    fun aSegmentWithoutATokenIsNotSent() {
+        val (sent, stack) = answering(204)
+        val without = SessionReplayUpload(upload.sessionId, upload.seq, upload.installId, null, upload.bytes)
+        assertEquals(SessionReplayUploadReply.FORBIDDEN, stack.sessionReplaySink().upload(without))
+        assertEquals(0, sent.size)
     }
 }

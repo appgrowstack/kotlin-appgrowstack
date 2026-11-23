@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `sessions-appgrowstack`: `stack.sessionReplaySink()` (`AppGrowStackReplaySink`) sends the recording's
+  segments (`PUT /v1/sessions/<session_id>/segments/<seq>` with `X-Session-Install` and `X-Session-Upload`):
+  2xx is `UPLOADED`, 403 `FORBIDDEN` (a segment without a token is not sent), 401, 408, 429 and 5xx throw,
+  any other 4xx is `REJECTED`. `stack.sessionSink()` hands back the answer's `upload_token` and `live` (with
+  the headers the live connection needs), and `NONE` when the policy has `replay.enabled` false.
+  `SESSION_INSTALL_HEADER`, `SESSION_UPLOAD_HEADER` and `SESSION_SEGMENT_CONTENT_TYPE`.
+
 ## [0.6.0] - 2026-11-23
 
 ### Changed

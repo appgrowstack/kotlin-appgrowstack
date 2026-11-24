@@ -28,7 +28,7 @@ kotlin-app-*のライブラリはどれも単体で動きます。このライ�
 | `campaign-appgrowstack` | kotlin-app-campaign | `stack.campaignSource(fallback)`: 組をサーバーから取る（ETag・304）。最初の取得が通るまでは同梱した組を使う。`stack.campaignContext`: 初めて見た日を入れたエンジンの文脈 |
 | `links-appgrowstack` | kotlin-app-links | `stack.attributionResolver()`: 入れた人の流入元をサーバーで決める（`POST /v1/links/attributions`）。`AttributionReporter` の `firstOpenAt` につなぐ型の `firstSeenAt` を渡す |
 | `support-appgrowstack` | kotlin-app-support | `stack.supportTransport(uid, tokens)`: 問い合わせ・スクリーンショット・オーナーのトークンで読む返事・ヘルプの記事（`/v1/support/*`）と、アンケートや意見の画面で書いた文を送る `sendFeedback(text, campaign, choice, context, lang)`（`POST /v1/support/feedback`）。`stack.supportContext(device)`: つなぐ型の直近の記録を添えた文脈 |
-| `sessions-appgrowstack` | kotlin-app-sessions | `stack.sessionSink()`: 軽い記録のバッチを送る `SessionSink`（`POST /v1/sessions/batches`）。サーバーが決めたリプレイの要否・残すプロパティ・`upload_token`・ライブの誘いを返す。`stack.sessionReplaySink()`: 録画の塊を送る `SessionReplaySink`（`PUT /v1/sessions/<session_id>/segments/<seq>`） |
+| `sessions-appgrowstack` | kotlin-app-sessions | `stack.sessionSink()`: 軽い記録のバッチを送る `SessionSink`（`POST /v1/sessions/batches`）。サーバーが決めたリプレイの要否・残すプロパティ・`upload_token`・ライブの誘いを返す。`stack.sessionReplaySink()`: 録画の塊を送る `SessionReplaySink`（`PUT /v1/sessions/<session_id>/segments/<seq>`）。`sessionEventProps(sessions)`: 計測の出来事の props に足す `session_id` と `screen`。サーバーが出来事とセッションをつなぐ |
 | `config-appgrowstack` | kotlin-app-config | `stack.configSource()`: 設定の組をサーバーから取る（`GET /v1/config/sets/<public key>`・ETag・304）。`stack.configFacts()`: 規則に使う端末の値 |
 
 ## はじめに

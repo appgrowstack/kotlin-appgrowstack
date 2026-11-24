@@ -1,5 +1,6 @@
 package com.appgrowstack.stack.sessions
 
+import com.appgrowstack.sessions.AppSessions
 import com.appgrowstack.sessions.SessionBatch
 import com.appgrowstack.sessions.SessionDevice
 import com.appgrowstack.sessions.SessionDeviceInfo
@@ -9,6 +10,12 @@ import com.appgrowstack.sessions.SessionReplayMode
 import com.appgrowstack.sessions.SessionScreen
 import com.appgrowstack.sessions.SessionSinkReply
 import com.appgrowstack.sessions.SessionsSdk
+import com.appgrowstack.sessions.testing.DirectExecutor
+import com.appgrowstack.sessions.testing.FakeSessionClock
+import com.appgrowstack.sessions.testing.InMemorySessionStateStore
+import com.appgrowstack.sessions.testing.RecordingSessionSink
+import com.appgrowstack.sessions.testing.SequenceSessionIds
+import com.appgrowstack.sessions.testing.test
 import com.appgrowstack.stack.AppGrowStack
 import com.appgrowstack.stack.AppGrowStackApp
 import com.appgrowstack.stack.AppGrowStackEnvironment
@@ -19,6 +26,7 @@ import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class SessionsAppGrowStackTest {
     private val app = AppGrowStackApp(version = "3.4.0", build = "340", channel = AppGrowStackApp.Channel.Play, lang = "ja")
@@ -44,6 +52,27 @@ class SessionsAppGrowStackTest {
         seq = 0,
         events = emptyList(),
     )
+
+    @Test
+    fun eventPropsCarryTheSessionAndTheScreen() {
+        val sessions = AppSessions(
+            RecordingSessionSink(), { SessionDeviceInfo.test() }, InMemorySessionStateStore(), FakeSessionClock(), SequenceSessionIds(),
+            sender = DirectExecutor,
+        )
+        // No recorder (an app without sessions) and a recorder not started yet: nothing is added
+        assertTrue(sessionEventProps(null).isEmpty())
+        assertTrue(sessionEventProps(sessions).isEmpty())
+
+        sessions.start()
+        val id = sessions.currentSessionId!!
+        assertTrue(id.startsWith("ses_"))
+        assertEquals(mapOf("session_id" to id), sessionEventProps(sessions))
+
+        sessions.screen("paywall")
+        assertEquals(mapOf("session_id" to id, "screen" to "paywall"), sessionEventProps(sessions))
+        // The event's own value wins
+        assertEquals(mapOf("session_id" to id, "screen" to "own"), sessionEventProps(sessions) + mapOf("screen" to "own"))
+    }
 
     @Test
     fun theBatchGoesWithTheStacksInstallId() {

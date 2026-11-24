@@ -1,5 +1,6 @@
 package com.appgrowstack.stack.sessions
 
+import com.appgrowstack.sessions.AppSessions
 import com.appgrowstack.sessions.SessionBatch
 import com.appgrowstack.sessions.SessionJson
 import com.appgrowstack.sessions.SessionLiveOffer
@@ -146,3 +147,32 @@ public class AppGrowStackReplaySink(private val stack: AppGrowStack) : SessionRe
 
 /** The sink for `AppSessions(replay = SessionReplayRecorder(directory, sink = …))`. */
 public fun AppGrowStack.sessionReplaySink(): AppGrowStackReplaySink = AppGrowStackReplaySink(this)
+
+/** The prop key the server reads into the data lake's `events.session_id`. */
+public const val SESSION_ID_PROP: String = "session_id"
+
+/** The prop key the server reads into the data lake's `events.screen`. */
+public const val SCREEN_PROP: String = "screen"
+
+/**
+ * The props that tie an analytics event to the session it happened in: `session_id` (the current
+ * session's id) and `screen` (the current screen), each only when there is one. Empty without
+ * [sessions] (an app that does not record sessions) and while no session is open.
+ *
+ * Add them to each event's props as the event is tracked, from any thread, before the event is kept
+ * for the envelope. A key the event already has keeps the event's value:
+ *
+ * ```kotlin
+ * val props = sessionEventProps(sessions) + event.props
+ * ```
+ *
+ * The server joins the event to the session's record and its recording with them, so a purchase or a
+ * paywall can be found in the session it happened in.
+ */
+public fun sessionEventProps(sessions: AppSessions?): Map<String, String> {
+    if (sessions == null) return emptyMap()
+    val props = LinkedHashMap<String, String>(2)
+    sessions.currentSessionId?.takeIf { it.isNotEmpty() }?.let { props[SESSION_ID_PROP] = it }
+    sessions.currentScreen?.takeIf { it.isNotEmpty() }?.let { props[SCREEN_PROP] = it }
+    return props
+}

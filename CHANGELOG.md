@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `sessions-appgrowstack`: `sessionEventProps(sessions)` gives the props that tie an analytics event to the session it happened in,
+  `session_id` and `screen`, each only when there is one (none without a recorder). The server reads them
+  into the data lake's `events.session_id` and `events.screen`, so a purchase or a paywall can be joined to the
+  session and its recording. Until now every event reached the server without them.
+  `SESSION_ID_PROP` and `SCREEN_PROP` name the keys.
+
 ## [0.8.0] - 2026-11-24
 
 ### Changed
